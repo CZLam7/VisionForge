@@ -48,46 +48,34 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 app.post('/api/edit', upload.single('image'), async (req, res) => {
   const promptText = req.body.prompt;
   const file       = req.file;
-
   if (!promptText || !file) {
     return res.status(400).json({ error: 'Missing prompt or image file' });
   }
-
   try {
-    // Wrap the uploaded file into the SDK helper
-    const filePath = path.resolve(file.path);
     const fileForAPI = await toFile(
-      fs.createReadStream(filePath),
+      fs.createReadStream(file.path),
       file.originalname,
       { type: file.mimetype }
     );
-
-    // Call the images.edit endpoint
     const response = await openai.images.edit({
-      model:           'gpt-image-1',
-      prompt:          promptText,
-      n:               1,
-      size:            '1024x1024',
-      // response_format: 'url',
-      image:           fileForAPI,
+      model:    'gpt-image-1',
+      prompt:   promptText,
+      n:        1,
+      size:     '1024x1024',
+      image:    fileForAPI
     });
+    fs.unlinkSync(file.path);
 
-    fs.unlinkSync(filePath);
-    const b64       = response.data[0].b64_json;
-    const outName   = `edited-${Date.now()}.png`;
-    const outPath   = path.join(__dirname, '..', outName); 
-    // __dirname is /app/src, so this writes to /app/edited-*.png
-
-    fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
-    console.log(`Wrote edited image to ${outPath}`);
-    res.json({ savedAs: outName });
-    return res.json({ b64_json: response.data[0].b64_json });
+    // just send back the b64_json (or include the file name if you like)
+    const b64 = response.data[0].b64_json;
+    return res.json({ b64_json: b64 });
   } catch (err) {
     console.error('Edit error:', err);
-    if (file && file.path) fs.unlinkSync(file.path);
+    if (file?.path) fs.unlinkSync(file.path);
     return res.status(500).json({ error: err.message });
   }
 });
+
 
 // ── Start server ────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;

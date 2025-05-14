@@ -1,44 +1,49 @@
 import { useState } from 'react';
 
 export default function App() {
-  const [file, setFile] = useState(null);
+  const [file,       setFile]       = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [uploadUrl, setUploadUrl] = useState('');
+  const [prompt,     setPrompt]     = useState('');
+  const [editedUrl,  setEditedUrl]  = useState('');
+  const [loading,    setLoading]    = useState(false); // ← new
 
   const handleFileChange = (e) => {
     const img = e.target.files[0];
     if (img) {
       setFile(img);
       setPreviewUrl(URL.createObjectURL(img));
-      setUploadUrl('');
+      setEditedUrl('');
     }
   };
 
-  const uploadToS3 = async () => {
-    if (!file) return;
+  const handleEdit = async () => {
+    if (!file || !prompt) return;
+    setLoading(true); // ← start spinner
     const form = new FormData();
-    form.append('file', file);
+    form.append('image', file);
+    form.append('prompt', prompt);
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/upload`,
-        { method: 'POST', mode: 'cors', body: form }
+        `${import.meta.env.VITE_API_URL}/api/edit`,
+        { method: 'POST', body: form }
       );
       if (!res.ok) throw new Error(await res.text());
-      const { url } = await res.json();
-      setUploadUrl(url);
+      const { b64_json } = await res.json();
+      setEditedUrl(`data:image/png;base64,${b64_json}`);
     } catch (err) {
       console.error(err);
-      alert(`Upload error: ${err.message}`);
+      alert(`Edit error: ${err.message}`);
+    } finally {
+      setLoading(false); // ← stop spinner
     }
   };
 
   return (
-  <div className="flex items-center justify-center min-h-screen w-screen bg-gray-100 p-8">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-8">
       <div className="w-full max-w-2xl space-y-8">
 
-        {/* Section 1: Upload & Local Preview */}
+        {/* 1. Upload & Preview */}
         <section className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">1. Upload Image</h2>
           <div className="flex items-center space-x-4">
@@ -61,49 +66,55 @@ export default function App() {
           </div>
         </section>
 
-        {/* Section 2: Upload to S3 & Display */}
+        {/* 2. Edit Prompt & Button */}
         <section className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">2. Upload to S3</h2>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={uploadToS3}
-              disabled={!file}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-            >
-              Upload to S3
-            </button>
-            {uploadUrl && (
-              <a href={uploadUrl} target="_blank" rel="noreferrer">
-                <img
-                  src={uploadUrl}
-                  alt="Uploaded to S3"
-                  className="w-64 h-64 object-contain rounded-lg border"
-                />
-              </a>
-            )}
-          </div>
-        </section>
-
-        {/* Section 3: Prompt & Edit */}
-        <section className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">3. Edit Prompt</h2>
-          <div className="flex space-x-3">
+          <h2 className="text-xl font-semibold mb-4">2. Edit Image</h2>
+          <div className="flex space-x-3 mb-4">
             <input
               type="text"
               className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="Enter edit prompt…"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              disabled={!uploadUrl}
+              disabled={!file || loading}
             />
             <button
-              disabled={!uploadUrl || !prompt}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              onClick={() => {/* TODO: call edit API */}}
+              onClick={handleEdit}
+              disabled={!file || !prompt || loading}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              Edit Image
+              {loading
+                ? <svg
+                    className="h-5 w-5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12" cy="12" r="10"
+                      stroke="currentColor" strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                : 'Edit Image'
+              }
             </button>
           </div>
+
+          {/* 3. Display Edited Image */}
+          {editedUrl && (
+            <div className="flex justify-center">
+              <img
+                src={editedUrl}
+                alt="Edited"
+                className="w-64 h-64 object-contain rounded-lg border"
+              />
+            </div>
+          )}
         </section>
 
       </div>
