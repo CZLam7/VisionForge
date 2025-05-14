@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+    env_file: ./backend/.env
+    ports:
+      - "3003:3001"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: build       # ← use the "build" stage (node:18-alpine), not the final nginx stage
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev  # now runs in a Node image that has npm & vite
+    environment:
+      - VITE_API_URL=http://localhost:3003
+    ports:
+      - "3002:3000"
+    depends_on:
+      - backend

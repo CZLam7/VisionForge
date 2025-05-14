@@ -3,6 +3,9 @@
 
 # Ignore environment files
 **/.env
+visionforge-s3-user_credentials.csv
+visionforge-s3-user_accessKeys.csv
+/image
 
 # Ignore logs
 *.log
