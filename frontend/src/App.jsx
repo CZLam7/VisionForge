@@ -15,10 +15,6 @@ export default function App() {
 
   // —— Handler to toggle brush on/off ——  
   const toggleBrush = () => {
-    if (!file) {
-      // optionally show tooltip or toast: "Upload an image first"
-      return;
-    }
     setBrushActive(!brushActive);
   };
 
@@ -120,13 +116,9 @@ export default function App() {
             {/* Brush Button with SVG icon & active styling */}
             <button
               onClick={toggleBrush}
-              disabled={!file}
-              title={!file ? 'Upload an image first' : ''}
               className={`
                 flex items-center space-x-2 px-4 py-2 border rounded
-                ${ !file 
-                    ? 'bg-gray-50 opacity-50 cursor-not-allowed' 
-                    : brushActive 
+                ${ brushActive 
                       ? 'bg-gray-300'    // darker when active
                       : 'bg-gray-100'    // lighter when inactive
                 }
@@ -151,38 +143,39 @@ export default function App() {
               max="100"
               value={brushSize}
               onChange={e => setBrushSize(Number(e.target.value))}
-              disabled={!file || !brushActive}
-              title={
-                !file
-                  ? 'Upload an image first'
-                  : !brushActive
+              disabled={!brushActive}
+              title={!brushActive
                   ? 'Activate Brush to adjust size'
                   : ''
               }
-              className="flex-1 cursor-pointer disabled:cursor-not-allowed"
-            />
+              className={`flex-1 ${brushActive ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}            />
           </div>
-          {/* Prompt with Clear text */}
-          <div className="relative">
-            <label className="block font-medium mb-2 text-lg">Prompt</label>
+          
+          {/* Prompt with inline “Clear Text” */}
+          <div className="space-y-2">
+            {/* Row: Label + Clear */}
+            <div className="flex items-center justify-between">
+              <label className="font-medium text-lg">Prompt</label>
+              <span
+                onClick={() => setPrompt('')}
+                className={`text-purple-600 text-sm cursor-pointer disabled:opacity-50"` }
+                title={!prompt ? 'Nothing to clear' : ''}
+              >
+                Clear Text
+              </span>
+            </div>
+
+            {/* Textarea */}
             <textarea
               rows={4}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               placeholder="Describe your edit…"
               disabled={loading}
-              className="w-full border rounded-lg px-3 py-2 h-32 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+              className="w-full border rounded-lg px-3 py-2 h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
             />
-            {/* Clear prompt as plain black text */}
-            <span
-              onClick={() => setPrompt('')}
-              disabled={!prompt}
-              title={!prompt ? 'Nothing to clear' : ''}
-              className="absolute bottom-2 right-2 pr-1 pb-1 text-sm font-bold text-black cursor-pointer disabled:opacity-50"
-            >
-              Clear
-            </span>
           </div>
+
 
           {/* Aspect Ratio */}
           <div>
