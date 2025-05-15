@@ -53,10 +53,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="h-16 bg-white shadow flex items-center px-6 mb-8">
-        <h1 className="text-2xl font-bold">Vision Forge</h1>
+      <header
+        className="h-16 flex items-center px-6 mb-8"  // removed `bg-white shadow mb-8`
+        style={{
+          background: 'linear-gradient(to right,#FF8F00, #EE66A6, #640D5F)'
+        }}
+      >
+        <h1
+          className="text-3xl font-bold text-white"
+          style={{ fontFamily: 'Sacramento,cursive' }}
+        >
+          Vision Forge
+        </h1>
       </header>
 
       <div className="max-w-7xl mx-auto flex gap-6">
