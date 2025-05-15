@@ -4,11 +4,22 @@ export default function App() {
   const [file,       setFile]       = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [prompt,     setPrompt]     = useState('');
+  const [ratio,      setRatio]      = useState('1:1');
+  const [brushSize,  setBrushSize]  = useState('M');
+  const [loading,    setLoading]    = useState(false);
   const [editedUrl,  setEditedUrl]  = useState('');
-  const [loading,    setLoading]    = useState(false); // ← new
+
+  const resetAll = () => {
+    setFile(null);
+    setPreviewUrl('');
+    setPrompt('');
+    setRatio('1:1');
+    setBrushSize('M');
+    setEditedUrl('');
+  };
 
   const handleFileChange = (e) => {
-    const img = e.target.files[0];
+    const img = e.target.files?.[0] ?? null;
     if (img) {
       setFile(img);
       setPreviewUrl(URL.createObjectURL(img));
@@ -18,10 +29,12 @@ export default function App() {
 
   const handleEdit = async () => {
     if (!file || !prompt) return;
-    setLoading(true); // ← start spinner
+    setLoading(true);
     const form = new FormData();
     form.append('image', file);
     form.append('prompt', prompt);
+    form.append('ratio', ratio);
+    form.append('brush_size', brushSize);
 
     try {
       const res = await fetch(
@@ -35,88 +48,147 @@ export default function App() {
       console.error(err);
       alert(`Edit error: ${err.message}`);
     } finally {
-      setLoading(false); // ← stop spinner
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-8">
-      <div className="w-full max-w-2xl space-y-8">
+    <div className="min-h-screen bg-gray-100 p-8">
+      {/* Header */}
+      <header className="h-16 bg-white shadow flex items-center px-6 mb-8">
+        <h1 className="text-2xl font-bold">Vision Forge</h1>
+      </header>
 
-        {/* 1. Upload & Preview */}
-        <section className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">1. Upload Image</h2>
-          <div className="flex items-center space-x-4">
-            <label className="flex-1 border-2 border-dashed border-gray-300 rounded p-6 text-center cursor-pointer hover:border-gray-400">
+      <div className="max-w-7xl mx-auto flex gap-6">
+        {/* Col 1: Controls */}
+        <section className="w-1/4 bg-white rounded-2xl shadow p-6 space-y-6">
+          {/* Brush selector */}
+          <div>
+            <label className="block font-medium mb-2">Select Area</label>
+            <div className="flex items-center space-x-2">
+              <button className="px-3 py-1 border rounded bg-gray-50">Brush</button>
+              {['S','M','L'].map(sz => (
+                <button
+                  key={sz}
+                  onClick={() => setBrushSize(sz)}
+                  className={`
+                    px-2 py-1 border rounded-full text-sm
+                    ${brushSize === sz ? 'bg-blue-600 text-white' : 'bg-gray-100'}
+                  `}
+                  aria-label={`Brush size ${sz}`}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Prompt */}
+          <div>
+            <label className="block font-medium mb-2">Prompt</label>
+            <input
+              type="text"
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              placeholder="Describe your edit…"
+              disabled={!file || loading}
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+            />
+          </div>
+
+          {/* Aspect Ratio */}
+          <div>
+            <label className="block font-medium mb-2">Aspect Ratio</label>
+            <select
+              value={ratio}
+              onChange={e => setRatio(e.target.value)}
+              disabled={!file || loading}
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none disabled:opacity-50"
+            >
+              {['1:1','16:9','4:5','9:16'].map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Generate / Regenerate */}
+          <button
+            onClick={handleEdit}
+            disabled={!file || !prompt || loading}
+            className="w-full flex justify-center items-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading
+              ? <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/>
+                  <path fill="currentColor" className="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+              : (editedUrl ? 'Regenerate' : 'Generate')
+            }
+          </button>
+        </section>
+
+        {/* Col 2: Original Image */}
+        <section className="w-3/8 bg-white rounded-2xl shadow p-6 relative">
+          {file && (
+            <button
+              onClick={resetAll}
+              className="absolute top-4 right-4 p-2 bg-gray-200 rounded-full hover:bg-gray-300"
+              title="Reupload Image (resets prompt & ratio)"
+            >
+              ↻
+            </button>
+          )}
+
+          {!file ? (
+            <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={handleFileChange}
+                disabled={loading}
               />
-              <span className="text-gray-600">Click to upload an image</span>
+              <span className="text-gray-600">Click or drag & drop to upload</span>
             </label>
-            {previewUrl && (
+          ) : (
+            <div className="h-64 overflow-hidden rounded-lg">
               <img
                 src={previewUrl}
-                alt="Local Preview"
-                className="w-64 h-64 object-contain rounded-lg shadow"
+                alt="Original"
+                className="w-full h-full object-contain"
               />
-            )}
-          </div>
-        </section>
-
-        {/* 2. Edit Prompt & Button */}
-        <section className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">2. Edit Image</h2>
-          <div className="flex space-x-3 mb-4">
-            <input
-              type="text"
-              className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter edit prompt…"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={!file || loading}
-            />
-            <button
-              onClick={handleEdit}
-              disabled={!file || !prompt || loading}
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading
-                ? <svg
-                    className="h-5 w-5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none" viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12" cy="12" r="10"
-                      stroke="currentColor" strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-                : 'Edit Image'
-              }
-            </button>
-          </div>
-
-          {/* 3. Display Edited Image */}
-          {editedUrl && (
-            <div className="flex justify-center">
-              <img
-                src={editedUrl}
-                alt="Edited"
-                className="w-64 h-64 object-contain rounded-lg border"
-              />
+              {/* TODO: mask canvas overlay here */}
             </div>
           )}
         </section>
 
+        {/* Col 3: Generated Image */}
+        <section className="w-3/8 bg-white rounded-2xl shadow p-6 relative flex flex-col items-center">
+          {editedUrl && (
+            <div className="absolute top-4 right-4 flex space-x-2">
+              <button className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                Save Draft
+              </button>
+              <a
+                href={editedUrl}
+                download="vision-forge-edit.png"
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Download
+              </a>
+            </div>
+          )}
+
+          {!editedUrl ? (
+            <div className="mt-12 text-gray-400">No preview yet</div>
+          ) : (
+            <img
+              src={editedUrl}
+              alt="Edited"
+              className="max-h-64 object-contain rounded-lg"
+            />
+          )}
+        </section>
       </div>
     </div>
   );
