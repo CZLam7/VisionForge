@@ -7,7 +7,7 @@ export default function App() {
   const [ratio,      setRatio]      = useState('1:1');
   const [brushSize,  setBrushSize]  = useState('M');
   const [loading,    setLoading]    = useState(false);
-  const [editedUrl,  setEditedUrl]  = useState('');;
+  const [editedUrl,  setEditedUrl]  = useState('');
 
   // —— New state for brush mode & mask data ——
   const [brushActive, setBrushActive] = useState(false);
@@ -40,6 +40,8 @@ export default function App() {
     setEditedUrl('');
   };
 
+  const saveDraft = () => {};
+
 
   const handleFileChange = (e) => {
     const img = e.target.files?.[0] ?? null;
@@ -58,8 +60,6 @@ export default function App() {
     const form = new FormData();
     form.append('image', file);
     form.append('prompt', prompt);
-    form.append('ratio', ratio);
-    form.append('brush_size', brushSize);
 
     try {
       const res = await fetch(
@@ -155,7 +155,7 @@ export default function App() {
           <div className="space-y-2">
             {/* Row: Label + Clear */}
             <div className="flex items-center justify-between">
-              <label className="font-medium text-lg">Prompt</label>
+              <label className="font-medium text-lg">Instruction</label>
               <span
                 onClick={() => setPrompt('')}
                 className={`text-purple-600 text-sm cursor-pointer disabled:opacity-50"` }
@@ -199,76 +199,153 @@ export default function App() {
             title={!file ? 'Upload an image first' : !prompt ? 'Enter a prompt' : ''}
             className="w-full flex justify-center items-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading
-              ? <SpinnerIcon />
-              : (editedUrl ? 'Regenerate' : 'Generate')
-            }
+            {loading 
+            ? (
+              // Inline spinner SVG instead of SpinnerIcon
+              <svg
+                className="h-5 w-5 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            ) 
+            : (editedUrl ? 'Regenerate' : 'Generate')
+          }
           </button>
         </section>
 
 
         {/* Col 2: Original Image */}
-        <section className="w-full lg:w-[37.5%] bg-white rounded-2xl shadow p-6 relative">
-          {file && (
+        <section className="w-full lg:w-[37.5%] bg-white rounded-2xl shadow p-6 flex flex-col">
+          {/* Title + Reupload */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium">Target Image</h2>
             <button
+              type="button"
               onClick={resetAll}
-              className="absolute top-4 right-4 p-2 bg-gray-200 rounded-full hover:bg-gray-300"
-              title="Reupload Image (resets prompt & ratio)"
+              disabled={!file}
+              title={!file ? 'Nothing to reupload' : 'Reupload Image (resets prompt & ratio)'}
+              className={`p-2 rounded-full dark:bg-indigo-100   ${
+                !file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-100 active:bg-indigo-200'}
+              }`}
             >
               ↻
             </button>
-          )}
+          </div>
 
-          {!file ? (
-            <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-                disabled={loading}
-              />
-              <span className="text-gray-600">Click or drag & drop to upload</span>
-            </label>
-          ) : (
-            <div className="h-64 overflow-hidden rounded-lg">
-              <img
-                src={previewUrl}
-                alt="Original"
-                className="w-full h-full object-contain"
-              />
-              {/* TODO: mask canvas overlay here */}
-            </div>
-          )}
+          {/* Upload / Preview – fill remaining space */}
+          <div className="flex-1">
+            {!file ? (
+              <label
+                className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400"
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  disabled={loading}
+                />
+                <span className="text-gray-600">Click or drag &amp; drop to upload</span>
+              </label>
+            ) : (
+              <div className="h-full overflow-hidden rounded-lg">
+                <img
+                  src={previewUrl}
+                  alt="Original"
+                  className="w-full h-full object-contain"
+                />
+                {/* TODO: mask canvas overlay here */}
+              </div>
+            )}
+          </div>
         </section>
+
 
         {/* Col 3: Generated Image */}
-        <section className="w-full lg:w-[37.5%] bg-white rounded-2xl shadow p-6 relative flex flex-col items-center">
-          {editedUrl && (
-            <div className="absolute top-4 right-4 flex space-x-2">
-              <button className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
-                Save Draft
-              </button>
-              <a
-                href={editedUrl}
-                download="vision-forge-edit.png"
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+        <section className="w-full lg:w-[37.5%] bg-white rounded-2xl shadow p-6 flex flex-col">
+          {/* Title + Actions */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium">Generated Image</h2>
+            <div className="flex space-x-2">
+              {/* Save Draft icon button */}
+              <button
+                type="button"
+                onClick={saveDraft}
+                disabled={!editedUrl}
+                title={!editedUrl ? 'No image to save' : 'Save Draft'}
+                className={`
+                  p-2 rounded-full  dark:bg-indigo-100   
+                  ${!editedUrl
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                `}
               >
-                Download
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 448 512"
+                  className="h-5 w-5 text-indigo-600"
+                  fill="currentColor"
+                >
+                  <path d="M433.9 129.9l-83.9-83.9A48 48 0 0 0 316.1 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V163.9a48 48 0 0 0 -14.1-33.9zM224 416c-35.3 0-64-28.7-64-64 0-35.3 28.7-64 64-64s64 28.7 64 64c0 35.3-28.7 64-64 64zm96-304.5V212c0 6.6-5.4 12-12 12H76c-6.6 0-12-5.4-12-12V108c0-6.6 5.4-12 12-12h228.5c3.2 0 6.2 1.3 8.5 3.5l3.5 3.5A12 12 0 0 1 320 111.5z"/>
+                </svg>
+              </button>
+              {/* Download icon button */}
+              <a
+                href={editedUrl || '#'}
+                download="vision-forge-edit.png"
+                title={!editedUrl ? 'No image to download' : 'Download Image'}
+                className={`
+                  p-2 rounded-full dark:bg-indigo-100   
+                  ${!editedUrl
+                    ? 'bg-gray-200 opacity-50 cursor-not-allowed'
+                    : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                `}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 640 512"
+                  className="h-5 w-5 text-indigo-600"
+                  fill="currentColor"
+                >
+                  <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128l-368 0zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39L344 184c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 134.1-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z"/>
+                </svg>
               </a>
             </div>
-          )}
+          </div>
 
-          {!editedUrl ? (
-            <div className="mt-12 text-gray-400">No preview yet</div>
-          ) : (
-            <img
-              src={editedUrl}
-              alt="Edited"
-              className="max-h-64 object-contain rounded-lg"
-            />
-          )}
+          {/* Preview / Placeholder */}
+          <div className="flex-1">
+            {editedUrl ? (
+              <div className="h-full overflow-hidden rounded-lg">
+                <img
+                  src={editedUrl}
+                  alt="Edited"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg">
+                <span className="text-gray-600">No generated image to preview</span>
+              </div>
+            )}
+          </div>
         </section>
+
       </div>
     </div>
   );
