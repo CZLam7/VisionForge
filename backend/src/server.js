@@ -61,7 +61,7 @@ app.post('/api/edit', upload.single('image'), async (req, res) => {
       model:    'gpt-image-1',
       prompt:   promptText,
       n:        1,
-      size:     '1024x1024',
+      size:     'auto',
       image:    fileForAPI
     });
     fs.unlinkSync(file.path);

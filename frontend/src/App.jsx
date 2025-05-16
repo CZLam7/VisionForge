@@ -4,7 +4,8 @@ export default function App() {
   const [file,       setFile]       = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [prompt,     setPrompt]     = useState('');
-  const [ratio,      setRatio]      = useState('1:1');
+  const [ratio,      setRatio]      = useState('original');
+  const [origRatio, setOrigRatio] = useState(1);
   const [brushSize,  setBrushSize]  = useState('M');
   const [loading,    setLoading]    = useState(false);
   const [editedUrl,  setEditedUrl]  = useState('');
@@ -33,7 +34,7 @@ export default function App() {
     setFile(null);
     setPreviewUrl('');
     setPrompt('');
-    setRatio('1:1');
+    setRatio('original');
     setBrushSize(50);
     setBrushActive(false);
     setMaskData(null);
@@ -46,13 +47,27 @@ export default function App() {
   const handleFileChange = (e) => {
     const img = e.target.files?.[0] ?? null;
     if (img) {
+      const url = URL.createObjectURL(img);
+      const temp = new Image();
+      temp.onload = () => {
+        setOrigRatio(temp.width/temp.height);
+        URL.revokeObjectURL(url);
+      };
+      temp.src = url;
+
       setFile(img);
-      setPreviewUrl(URL.createObjectURL(img));
+      setPreviewUrl(url);
       setEditedUrl('');
       setBrushActive(false);
       setMaskData(null);
     }
   };
+
+  // Preview changes based on aspect ratio
+  const isOriginalNoFile = ratio === 'original' && !file;
+  const [w, h] = ratio === 'original'
+  ? [origRatio, 1]
+  : ratio.split(':').map(Number);
 
   const handleEdit = async () => {
     if (!file || !prompt) return;
@@ -60,7 +75,6 @@ export default function App() {
     const form = new FormData();
     form.append('image', file);
     form.append('prompt', prompt);
-
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/edit`,
@@ -186,9 +200,12 @@ export default function App() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none"
               title="Select your desired output aspect ratio"
             >
-              {['1:1','16:9','4:5','9:16'].map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
+              <option value="original">Uploaded Image Ratio</option>
+              <option value="1:1">1:1</option>
+              <option value="16:9">16:9</option>
+              <option value="21:9">21:9</option>
+              <option value="9:16">9:16</option>
+              <option value="3:2">3:2</option>
             </select>
           </div>
 
@@ -329,17 +346,31 @@ export default function App() {
           </div>
 
           {/* Preview / Placeholder */}
-          <div className="flex-1">
+          <div
+            className={`
+              w-full overflow-hidden rounded-lg
+              ${isOriginalNoFile ? 'flex-1' : ''}
+              overflow-hidden rounded-lg
+            `}
+            style={
+              isOriginalNoFile 
+                ? {}
+                : { aspectRatio: `${w} / ${h}` }
+            }
+          >
             {editedUrl ? (
-              <div className="h-full overflow-hidden rounded-lg">
-                <img
-                  src={editedUrl}
-                  alt="Edited"
-                  className="w-full h-full object-contain"
-                />
-              </div>
+              <img
+                src={editedUrl}
+                alt="Edited"
+                className="w-full h-full object-contain"
+              />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg">
+              <div
+                className={`
+                  w-full h-full flex items-center justify-center
+                  border-2 border-dashed border-gray-300 rounded-lg
+                `}
+              >
                 <span className="text-gray-600">No generated image to preview</span>
               </div>
             )}
