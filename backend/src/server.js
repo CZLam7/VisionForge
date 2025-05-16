@@ -48,6 +48,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 app.post('/api/edit', upload.single('image'), async (req, res) => {
   const promptText = req.body.prompt;
   const file       = req.file;
+  const size       = req.body.size || '1024x1024';
   if (!promptText || !file) {
     return res.status(400).json({ error: 'Missing prompt or image file' });
   }
@@ -61,7 +62,7 @@ app.post('/api/edit', upload.single('image'), async (req, res) => {
       model:    'gpt-image-1',
       prompt:   promptText,
       n:        1,
-      size:     'auto',
+      size:     size,
       image:    fileForAPI
     });
     fs.unlinkSync(file.path);

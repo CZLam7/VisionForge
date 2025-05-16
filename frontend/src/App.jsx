@@ -4,11 +4,10 @@ export default function App() {
   const [file,       setFile]       = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [prompt,     setPrompt]     = useState('');
-  const [ratio,      setRatio]      = useState('original');
-  const [origRatio, setOrigRatio] = useState(1);
   const [brushSize,  setBrushSize]  = useState('M');
   const [loading,    setLoading]    = useState(false);
   const [editedUrl,  setEditedUrl]  = useState('');
+  const [size, setSize] = useState('1024x1024');
 
   // —— New state for brush mode & mask data ——
   const [brushActive, setBrushActive] = useState(false);
@@ -34,7 +33,7 @@ export default function App() {
     setFile(null);
     setPreviewUrl('');
     setPrompt('');
-    setRatio('original');
+    setSize('1024x1024');
     setBrushSize(50);
     setBrushActive(false);
     setMaskData(null);
@@ -47,39 +46,37 @@ export default function App() {
   const handleFileChange = (e) => {
     const img = e.target.files?.[0] ?? null;
     if (img) {
+      // create a stable preview URL
       const url = URL.createObjectURL(img);
-      const temp = new Image();
-      temp.onload = () => {
-        setOrigRatio(temp.width/temp.height);
-        URL.revokeObjectURL(url);
-      };
-      temp.src = url;
-
+  
+      // set file & preview; we don’t need origRatio any more
       setFile(img);
       setPreviewUrl(url);
       setEditedUrl('');
       setBrushActive(false);
       setMaskData(null);
+  
+      // NOTE: if you want to free memory later, you can revoke this URL
+      // when the component unmounts or when a new file is chosen.
+      // e.g. URL.revokeObjectURL(previousUrl);
     }
   };
-
-  // Preview changes based on aspect ratio
-  const isOriginalNoFile = ratio === 'original' && !file;
-  const [w, h] = ratio === 'original'
-  ? [origRatio, 1]
-  : ratio.split(':').map(Number);
-
+  
+  const [pw, ph] = size.split('x').map(Number);
   const handleEdit = async () => {
     if (!file || !prompt) return;
     setLoading(true);
-    const form = new FormData();
-    form.append('image', file);
-    form.append('prompt', prompt);
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/edit`,
-        { method: 'POST', body: form }
-      );
+      const form = new FormData();
+      form.append('image', file);
+      form.append('prompt', prompt);
+      form.append('size', size);    
+  
+      console.log(`Calling API with size=${size}…`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/edit`, {
+        method: 'POST',
+        body: form
+      });
       if (!res.ok) throw new Error(await res.text());
       const { b64_json } = await res.json();
       setEditedUrl(`data:image/png;base64,${b64_json}`);
@@ -193,19 +190,16 @@ export default function App() {
 
           {/* Aspect Ratio */}
           <div>
-            <label className="block font-medium mb-2 text-lg">Aspect Ratio</label>
+            <label className="block font-medium mb-2 text-lg">Size / Ratio</label>
             <select
-              value={ratio}
-              onChange={e => setRatio(e.target.value)}
+              value={size}
+              onChange={e => setSize(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none"
-              title="Select your desired output aspect ratio"
+              title="Choose output size/ratio"
             >
-              <option value="original">Uploaded Image Ratio</option>
-              <option value="1:1">1:1</option>
-              <option value="16:9">16:9</option>
-              <option value="21:9">21:9</option>
-              <option value="9:16">9:16</option>
-              <option value="3:2">3:2</option>
+              <option value="1024x1024">Square (1:1)</option>
+              <option value="1536x1024">Landscape (3:2)</option>
+              <option value="1024x1536">Portrait (2:3)</option>
             </select>
           </div>
 
@@ -347,18 +341,10 @@ export default function App() {
 
           {/* Preview / Placeholder */}
           <div
-            className={`
-              w-full overflow-hidden rounded-lg
-              ${isOriginalNoFile ? 'flex-1' : ''}
-              overflow-hidden rounded-lg
-            `}
-            style={
-              isOriginalNoFile 
-                ? {}
-                : { aspectRatio: `${w} / ${h}` }
-            }
+            className="w-full overflow-hidden rounded-lg"
+            style={{ aspectRatio: `${pw} / ${ph}` }}
           >
-            {editedUrl ? (
+            {editedUrl ? ( 
               <img
                 src={editedUrl}
                 alt="Edited"
@@ -366,12 +352,12 @@ export default function App() {
               />
             ) : (
               <div
-                className={`
-                  w-full h-full flex items-center justify-center
-                  border-2 border-dashed border-gray-300 rounded-lg
-                `}
+                className="w-full h-full flex items-center justify-center
+                          border-2 border-dashed border-gray-300 rounded-lg"
               >
-                <span className="text-gray-600">No generated image to preview</span>
+                <span className="text-gray-600">
+                  No generated image to preview
+                </span>
               </div>
             )}
           </div>
