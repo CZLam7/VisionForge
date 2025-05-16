@@ -18,7 +18,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: npm run dev  # now runs in a Node image that has npm & vite
+    command: sh -c "npm ci && npm run dev"
     environment:
       - VITE_API_URL=http://localhost:3003
     ports:
