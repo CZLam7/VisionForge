@@ -75,29 +75,52 @@ export default function LandingPage() {
             <div className="relative mx-auto max-w-5xl px-4 md:px-6">
                 {/* White card */}
                 <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                    Make complex edits simple with our AI photo editor
-                </h2>
-                <p className="text-gray-700 mb-6">
-                    Take control of your image’s look and feel. Remove distractions, add elements, or transform details—all with a few clicks.
-                    Take control of your image’s look and feel. Remove distractions, add elements, or transform details—all with a few clicks.
-                    Take control of your image’s look and feel. Remove distractions, add elements, or transform details—all with a few clicks.
-                </p>
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                      Simplify every photo edit with AI and a single prompt
+                    </h2>
+                    <p className="text-gray-700 mb-6">
+                      Tell Vision Forge exactly what you need and watch our AI transform your image in seconds.  
+                      From removing distractions to swapping backgrounds and boosting colors, our editor follows your prompt to deliver professional-quality results automatically.
+                    </p>
 
-                {/* Dashed drop-zone */}
-                <label className="mx-auto w-full max-w-xs border-2 border-dashed border-gray-300 rounded-lg py-8 flex flex-col items-center cursor-pointer hover:border-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M7 16V8m0 0L3 12m4-4l4 4m6 4v-8m0 0l4 4m-4-4l-4 4" />
-                    </svg>
-                    <span className="text-gray-600 font-medium mb-2">Upload your image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLandingUpload}
-                      className="hidden"
-                    />                
-                </label>
+
+                    <div className="self-start mt-8">
+                      <input
+                        id="landing-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLandingUpload}
+                      />
+                      <label
+                        htmlFor="landing-upload"
+                        className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg cursor-pointer hover:bg-purple-700"
+                      >
+                        {/* Circle + up-arrow icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 mr-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 16v-8m0 0l-4 4m4-4l4 4"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        Upload your image
+                      </label>
+                    </div>
                 <p className="text-gray-500 mt-3">or drop it here</p>
                 </div>
             </div>
@@ -109,18 +132,21 @@ export default function LandingPage() {
           {/* 1: Image Left */}
           <div className="flex flex-col md:flex-row items-center md:space-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
-              <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-                <span className="text-gray-500">Image Placeholder</span>
-              </div>
+              <img
+                src="image/info-image1.png"
+                alt="Info section illustration"
+                className="w-full h-100 object-cover rounded-2xl"
+              />
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Powerful AI Tools</h3>
+              <h3 className="text-2xl font-semibold mb-4">Talk about using AI to generate image efficiently</h3>
               <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
               <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
               <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
               <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
             </div>
           </div>
+
           {/* 2: Image Right */}
           <div className="flex flex-col md:flex-row-reverse md:flex-row items-center md:gap-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
@@ -129,7 +155,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Seamless Workflow</h3>
+              <h3 className="text-2xl font-semibold mb-4">Single Prompt </h3>
               <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
               <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
               <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
@@ -144,7 +170,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Powerful AI Tools</h3>
+              <h3 className="text-2xl font-semibold mb-4">Talk about Brush </h3>
               <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
               <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
               <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
@@ -209,11 +235,35 @@ export default function LandingPage() {
                 />
                 <label
                   htmlFor="landing-upload"
-                  className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg cursor-pointer hover:bg-purple-700"
+                  className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg cursor-pointer hover:bg-purple-700"
                 >
+                  {/* Circle + up-arrow icon */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 16v-8m0 0l-4 4m4-4l4 4"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   Upload your image
                 </label>
               </div>
+
+
             </div>
           </div>
         </section>
