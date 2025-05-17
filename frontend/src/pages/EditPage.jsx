@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export default function App() {
   const [file,       setFile]       = useState(null);
@@ -8,6 +9,15 @@ export default function App() {
   const [loading,    setLoading]    = useState(false);
   const [editedUrl,  setEditedUrl]  = useState('');
   const [size, setSize] = useState('1024x1024');
+
+  const { state } = useLocation()
+  const initialFile = state?.file ?? null
+  useEffect(() => {
+    if (initialFile) {
+      setFile(initialFile) 
+      setPreviewUrl(URL.createObjectURL(initialFile))
+    }
+  }, [initialFile]);
 
   // —— New state for brush mode & mask data ——
   const [brushActive, setBrushActive] = useState(false);

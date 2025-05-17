@@ -1,11 +1,50 @@
 import React from 'react';
+import { useState } from 'react';
+import { useNavigate  } from 'react-router-dom';
 
 export default function LandingPage() {
+  const steps = [
+    {
+      title: 'Upload your photo',
+      desc: 'Supported formats: PNG, WebP, JPG. Click the button to upload or drag & drop into the layout. File size must be under 25 MB.'
+    },
+    {
+      title: 'Select area',
+      desc: 'Use the brush tool to mark your target region. Adjust brush size by dragging the slider to get pixel-perfect control.'
+    },
+    {
+      title: 'Enter instruction',
+      desc: 'Type your edit request—up to 32 000 characters of freedom to describe exactly what you want!'
+    },
+    {
+      title: 'Choose aspect ratio',
+      desc: 'Pick Square (1:1), Landscape (3:2), or Portrait (2:3). The preview pane will resize to match so you can see exactly how your result will look.'
+    },
+    {
+      title: 'Generate image',
+      desc: 'Hit “Generate” and wait ~40 seconds. If you’re not happy with the result, tweak your instruction or click “Reupload” to start over.'
+    },
+    {
+      title: 'Download your edit',
+      desc: 'Once satisfied, click the download button in the generated-image panel. Your file will be saved in the aspect ratio you selected.'
+    }
+  ];
+  
+  const [openIndex, setOpenIndex] = useState(0);
+
+  const navigate = useNavigate()
+
+  function handleLandingUpload(ev) {
+    const file = ev.target.files?.[0]
+    if (!file) return
+    navigate('/edit', { state: { file } })
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
 
       {/* Main content wrapper: uniform padding + max-width */}
-      <div className="flex-1 w-full px-8 md:px-10">
+      <div className="flex-1 w-full px-8 md:px-20 2xl:px-50">
 
         {/* Header */}
         <header className="h-20 flex items-center px-6 mb-8">
@@ -52,7 +91,12 @@ export default function LandingPage() {
                         d="M7 16V8m0 0L3 12m4-4l4 4m6 4v-8m0 0l4 4m-4-4l-4 4" />
                     </svg>
                     <span className="text-gray-600 font-medium mb-2">Upload your image</span>
-                    <input type="file" accept="image/*" className="hidden" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLandingUpload}
+                      className="hidden"
+                    />                
                 </label>
                 <p className="text-gray-500 mt-3">or drop it here</p>
                 </div>
@@ -72,11 +116,13 @@ export default function LandingPage() {
             <div className="md:w-1/2">
               <h3 className="text-2xl font-semibold mb-4">Powerful AI Tools</h3>
               <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
+              <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
+              <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
+              <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
             </div>
           </div>
           {/* 2: Image Right */}
-          <div className="flex flex-col md:flex-row items-center md:space-x-12 md:flex-row-reverse">
+          <div className="flex flex-col md:flex-row-reverse md:flex-row items-center md:gap-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
               <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
                 <span className="text-gray-500">Image Placeholder</span>
@@ -85,35 +131,92 @@ export default function LandingPage() {
             <div className="md:w-1/2">
               <h3 className="text-2xl font-semibold mb-4">Seamless Workflow</h3>
               <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
+              <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
+              <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
               <p className="text-gray-700">Integer feugiat scelerisque varius morbi enim nunc faucibus.</p>
+            </div>
+          </div>
+          {/* 3: Image Left */}
+          <div className="flex flex-col md:flex-row items-center md:space-x-12">
+            <div className="md:w-1/2 mb-6 md:mb-0">
+              <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
+                <span className="text-gray-500">Image Placeholder</span>
+              </div>
+            </div>
+            <div className="md:w-1/2">
+              <h3 className="text-2xl font-semibold mb-4">Powerful AI Tools</h3>
+              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+              <p className="text-gray-700">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
             </div>
           </div>
         </section>
 
-        {/* How to Edit Section */}
-        <section className="py-16">
-          <h3 className="text-3xl font-bold text-center mb-12">How to Edit an Image with AI</h3>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-center">
-            {['Upload','Select Area','Enter Instruction','Choose Ratio','Generate'].map((step, i) => (
-              <div key={i} className="md:col-span-1">
-                <div className="w-16 h-16 mx-auto bg-purple-600 text-white rounded-full flex items-center justify-center mb-4">
-                  {i+1}
-                </div>
-                <h4 className="font-semibold mb-2">{step}</h4>
-                <p className="text-gray-600">
-                  {step === 'Upload' ? 'Choose your photo.' :
-                   step === 'Select Area' ? 'Brush over the part (optional).' :
-                   step === 'Enter Instruction' ? 'Type your edit.' :
-                   step === 'Choose Ratio' ? 'Pick aspect ratio.' :
-                   'Click generate to see magic.'}
-                </p>
+      </div> 
+
+
+      <section className="py-16 bg-gray-100">
+          <div className="max-w-8xl mx-auto px-8 md:px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            {/* Left: Instruction Image */}
+            <img
+              src="image/instruction.png"
+              alt="Instruction preview"
+              className="w-full h-auto max-h-[600px] object-cover rounded-lg"
+            />
+
+
+            {/* Right: Accordion list with just vertical lines */}
+            <div className="flex flex-col">
+              <h3 className="text-3xl font-bold mb-8">How to edit a photo in AI</h3>
+                {steps.map((step, i) => {
+                  const isOpen = i === openIndex;
+                  return (
+                    <div key={i} className="mb-6">
+                      <div
+                        onClick={() => setOpenIndex(i)}
+                        className="flex cursor-pointer"
+                      >
+                        {/* Full‐height strip */}
+                        <div
+                          className={`self-stretch w-1 mr-4 rounded ${
+                            isOpen
+                              ? 'bg-gradient-to-b from-[#FF8F00] via-[#EE66A6] to-[#640D5F]'
+                              : 'bg-gray-300'
+                          } transition-colors duration-200`}
+                        />
+                        <div className="flex-1">
+                          <h4 className={`font-semibold ${isOpen ? 'text-gray-900' : 'text-gray-700'}`}>
+                            {step.title}
+                          </h4>
+                          {isOpen && (
+                            <p className="mt-2 text-gray-600">
+                              {step.desc}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              <div className="self-start mt-8">
+                <input
+                  id="landing-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLandingUpload}
+                />
+                <label
+                  htmlFor="landing-upload"
+                  className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg cursor-pointer hover:bg-purple-700"
+                >
+                  Upload your image
+                </label>
               </div>
-            ))}
+            </div>
           </div>
         </section>
-
-      </div> {/* end of container */}
-
       {/* Full-width Footer */}
       <footer className="bg-gray-800 py-6">
         <div className="container mx-auto max-w-4xl px-4 md:px-6 text-center">
