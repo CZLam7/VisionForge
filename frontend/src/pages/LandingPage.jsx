@@ -133,7 +133,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center md:space-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
               <img
-                src="image/info-image1.png"
+                src="/info-image1.png"
                 alt="Info section illustration"
                 className="w-full h-100 object-cover rounded-2xl"
               />
@@ -153,7 +153,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row-reverse items-center md:gap-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
               <img
-                src="image/info-image2.png"
+                src="/info-image2.png"
                 alt="Example of single-prompt edit"
                 className="w-full h-auto rounded-lg"
               />
@@ -192,7 +192,7 @@ export default function LandingPage() {
           <div className="max-w-8xl mx-auto px-8 md:px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             {/* Left: Instruction Image */}
             <img
-              src="image/instruction.png"
+              src="/instruction.png"
               alt="Instruction preview"
               className="w-full h-auto max-h-[600px] object-cover rounded-lg"
             />
