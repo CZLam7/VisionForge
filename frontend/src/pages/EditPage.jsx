@@ -20,8 +20,8 @@ export default function App() {
 
   // --- Refs ---
   const imgRef = useRef(null);
-  const canvasRef = useRef(null);
-
+  const uiCanvasRef = useRef(null);  // for on-screen blue overlay
+  const maskCanvasRef = useRef(null); // for the hidden mask
   const { state } = useLocation();
   const initialFile = state?.file ?? null;
 
@@ -37,8 +37,8 @@ export default function App() {
   const clearSelection = () => {
     setMaskData(null);
     // Remove old mask from canvas
-    const ctx = canvasRef.current?.getContext('2d');
-    if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    const ctx = uiCanvasRef.current?.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, uiCanvasRef.current.width, uiCanvasRef.current.height);
   };
   const resetAll = () => {
     setFile(null);
@@ -64,105 +64,147 @@ export default function App() {
 
   const handleEdit = async () => {
     if (!file || !prompt) return;
+    console.log('🔄 Starting edit…', { file, prompt, size });
     setLoading(true);
-    // capture mask blob
-    const maskBlob = await new Promise(r => canvasRef.current.toBlob(r, 'image/png'));
+
+    // first, make sure the mask canvas ref is there
+    const maskCanvas = maskCanvasRef.current;
+    const uiCanvas   = uiCanvasRef.current;
+    console.log('UI Canvas:', uiCanvas, 'Mask Canvas:', maskCanvas);
+    if (!maskCanvas) {
+      console.error('❌ maskCanvasRef is null!');
+      setLoading(false);
+      return;
+    }
+
     try {
+      // generate mask blob
+      console.log('🖌️  Generating mask blob from mask canvas…');
+      const maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
+      console.log('✅ Mask blob ready:', maskBlob);
+
+      // download it locally so you can inspect it
+      // const maskURL = URL.createObjectURL(maskBlob);
+      // console.log('📥 Mask URL:', maskURL);
+      // const a = document.createElement('a');
+      // a.href = maskURL;
+      // a.download = 'mask.png';
+      // document.body.appendChild(a);
+      // a.click();
+      // document.body.removeChild(a);
+      // URL.revokeObjectURL(maskURL);
+
+      // now build your form
       const form = new FormData();
       form.append('image', file);
       form.append('mask', maskBlob, 'mask.png');
       form.append('prompt', prompt);
       form.append('size', size);
+      console.log('📦 FormData prepared:', { image: file, mask: maskBlob, prompt, size });
 
+      // send it off
+      console.log('🚀 Sending POST to', `${import.meta.env.VITE_API_URL}/api/edit`);
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/edit`, {
         method: 'POST',
         body: form
       });
-      if (!res.ok) throw new Error(await res.text());
+      console.log('📶 Response status:', res.status, res.statusText);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('❌ Edit error response body:', text);
+        throw new Error(text);
+      }
+
       const { b64_json } = await res.json();
+      console.log('🎉 Edit succeeded, b64 length:', b64_json.length);
       setEditedUrl(`data:image/png;base64,${b64_json}`);
     } catch (err) {
-      console.error(err);
+      console.error('⚠️ handleEdit caught error:', err);
       alert(`Edit error: ${err.message}`);
     } finally {
+      console.log('⏹️ handleEdit complete, loading false');
       setLoading(false);
     }
   };
 
   // --- Canvas Setup & Painting ---
-  const updateCanvasSize = () => {
-    const img = imgRef.current;
-    const c = canvasRef.current;
-    if (!img || !c) return;
-    // match buffer to image natural size
-    c.width = img.naturalWidth;
-    c.height = img.naturalHeight;
-    // scale CSS to fit container
-    c.style.width = img.clientWidth + 'px';
-    c.style.height = img.clientHeight + 'px';
-    c.style.pointerEvents = brushActive ? 'auto' : 'none';
-  };
+  const displaySize = 10 + (brushSize / 100) * 20;
 
-  useEffect(() => {
-    if (brushActive) {
-      const ctx = canvasRef.current.getContext('2d');
-      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      // ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      // ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
-  }, [brushActive]);
+  function updateCanvasSize() {
+    const img = imgRef.current;
+    if (!img) return;
+    [uiCanvasRef, maskCanvasRef].forEach(ref => {
+      const c = ref.current;
+      c.width  = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.style.width  = img.clientWidth + 'px';
+      c.style.height = img.clientHeight + 'px';
+    });
+
+    const mc = maskCanvasRef.current.getContext('2d');
+    mc.clearRect(0, 0, mc.canvas.width, mc.canvas.height);
+    mc.fillStyle = '#ffffff';
+    mc.drawImage(img, 0, 0, mc.canvas.width, mc.canvas.height);
+  }
 
   useEffect(() => {
     updateCanvasSize();
-  }, [previewUrl, brushActive]);
+  }, [previewUrl]);
 
-  const displaySize = 10 + (brushSize / 100) * 20;
 
   useEffect(() => {
     window.addEventListener('resize', updateCanvasSize);
     return () => window.removeEventListener('resize', updateCanvasSize);
   },);
 
-  function getCanvasCoords(e, canvas) {
-    const rect = canvas.getBoundingClientRect();
+  function getCanvasCoords(e) {
+    const c    = uiCanvasRef.current;
+    const rect = c.getBoundingClientRect();
     return {
-      x: (e.clientX - rect.left) * (canvas.width  / rect.width),
-      y: (e.clientY - rect.top ) * (canvas.height / rect.height)
+      x: (e.clientX - rect.left) * (c.width  / rect.width),
+      y: (e.clientY - rect.top ) * (c.height / rect.height),
     };
   }
 
+  // 2) Handle painting on both canvases:
   function startPaint(e) {
     setPainting(true);
-    const c   = canvasRef.current;
-    const ctx = c.getContext('2d');
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = 'rgb(123, 200, 233, 0.04)';
-    ctx.lineWidth   = brushSize * 2;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
+    const { x, y } = getCanvasCoords(e);
 
-    // begin the path exactly at the pointer
-    const { x, y } = getCanvasCoords(e, c);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  }
-  function endPaint() {
-    setPainting(false);
-    const ctx = canvasRef.current.getContext('2d');
-    // reset back to default if needed
-    ctx.globalCompositeOperation = 'source-over';
+    const uiCtx = uiCanvasRef.current.getContext('2d');
+    uiCtx.globalCompositeOperation = 'source-over';
+    uiCtx.strokeStyle = 'rgba(0,200,255,0.4)';
+    uiCtx.lineWidth = brushSize * 2;
+    uiCtx.lineCap   = 'round';
+    uiCtx.beginPath();
+    uiCtx.moveTo(x, y);
+
+    const mCtx = maskCanvasRef.current.getContext('2d');
+    mCtx.globalCompositeOperation = 'destination-out';
+    mCtx.lineWidth = brushSize * 2;
+    mCtx.lineCap   = 'round';
+    mCtx.beginPath();
+    mCtx.moveTo(x, y);
   }
 
   function paint(e) {
-    console.log('painting?', painting);
     if (!painting) return;
-    const c   = canvasRef.current;
-    const ctx = c.getContext('2d');
+    const { x, y } = getCanvasCoords(e);
 
-    const { x, y } = getCanvasCoords(e, c);
-    ctx.lineTo(x, y);
-    ctx.stroke();
+    const uiCtx = uiCanvasRef.current.getContext('2d');
+    uiCtx.lineTo(x, y);
+    uiCtx.stroke();
+
+    const mCtx = maskCanvasRef.current.getContext('2d');
+    mCtx.lineTo(x, y);
+    mCtx.stroke();
   }
+
+  function endPaint() {
+    setPainting(false);
+    setMaskData(maskCanvasRef.current.toDataURL('image/png'));
+  }
+
 
 
   const [pw, ph] = size.split('x').map(Number);
@@ -337,7 +379,7 @@ export default function App() {
               </label>
             ) : (
               <div className="relative h-full overflow-hidden rounded-lg">
-                {/* Remove old placeholder <img> */}
+                {/* your real image */}
                 <img
                   ref={imgRef}
                   src={previewUrl}
@@ -345,50 +387,52 @@ export default function App() {
                   className="w-full h-full object-contain"
                   onLoad={updateCanvasSize}
                 />
-                {/* Remove any existing mask placeholder */}
 
-                {/* Add canvas overlay for drawing */}
+                {/* 1) UI Canvas (visible) */}
                 <canvas
-                  ref={canvasRef}
-                  className="absolute inset-0"
+                  ref={uiCanvasRef}
+                  className="absolute inset-0 z-10"
                   onPointerDown={startPaint}
                   onPointerMove={e => {
-                    paint(e);
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+                    paint(e)
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top })
                   }}
                   onPointerUp={endPaint}
-                  onPointerLeave={e => { endPaint(); setHovering(false); }}
+                  onPointerLeave={e => { endPaint(); setHovering(false) }}
                   onPointerEnter={e => setHovering(true)}
+                  style={{ pointerEvents: brushActive ? 'auto' : 'none' }}
                 />
 
-                {/* Live brush cursor preview (remove if undesired) */}
+                {/* 2) Mask Canvas (hidden) */}
+                <canvas
+                  ref={maskCanvasRef}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ opacity: 0, pointerEvents: 'none' }}
+                />
+
+                {/* Live brush cursor preview (optional) */}
                 {brushActive && hovering && (() => {
-                  const c = canvasRef.current;
-                  // how many CSS px per canvas px
-                  const scale = c.clientWidth / c.width;
-                  // radius in CSS px
-                  const radius = brushSize * scale;
+                  const c = uiCanvasRef.current
+                  const scale  = c.clientWidth / c.width
+                  const radius = brushSize * scale
 
                   return (
                     <div
                       className="absolute"
                       style={{
-                        // use pointer.x/y (CSS px) directly here:
                         left:  pointer.x - radius,
                         top:   pointer.y - radius,
-                        width:  radius * 2,
+                        width: radius * 2,
                         height: radius * 2,
-                        border:        '2px solid rgba(156,163,175,0.8)',
-                        borderRadius:  '50%',
-                        pointerEvents: 'none',
-                        mixBlendMode:  'difference',
+                        border:       '2px solid rgba(156,163,175,0.8)',
+                        borderRadius: '50%',
+                        pointerEvents:'none',
+                        mixBlendMode: 'difference',
                       }}
                     />
-                  );
+                  )
                 })()}
-
-
               </div>
             )}
           </div>
