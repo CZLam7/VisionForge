@@ -1,4 +1,4 @@
-# AI Image Editor Web App
+# Vision Forge - An AI Image Editor Web App
 
 > **Web Application:** [https://vision-forge-eight.vercel.app](https://vision-forge-eight.vercel.app)
 
@@ -59,12 +59,12 @@ cd VisionForge
 
 * **Frontend** (`frontend/.env`):
 
-  * `VITE_API_URL=<backend-deployed-or-local-url>`
+  * `VITE_API_URL= https://visionforge-bb5f.onrender.com`
 
 ### 3. Build & start with Docker Compose
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 This brings up both frontend and backend in containers—regardless of your host machine, you get a consistent environment.
