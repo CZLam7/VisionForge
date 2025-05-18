@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 
 export default function App() {
   // --- Existing States ---
@@ -50,7 +50,6 @@ export default function App() {
     setMaskData(null);
     setEditedUrl('');
   };
-  const saveDraft = () => {};
 
   const handleFileChange = e => {
     const img = e.target.files?.[0] ?? null;
@@ -64,7 +63,6 @@ export default function App() {
 
   const handleEdit = async () => {
     if (!file || !prompt) return;
-    console.log('🔄 Starting edit…', { file, prompt, size });
     setLoading(true);
 
     // first, make sure the mask canvas ref is there
@@ -77,30 +75,19 @@ export default function App() {
       return;
     }
 
-    try {
-      // generate mask blob
-      console.log('🖌️  Generating mask blob from mask canvas…');
-      const maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
-      console.log('✅ Mask blob ready:', maskBlob);
+    const finalPrompt = maskData
+      ? `${prompt.trim()} at the selected area`
+      : prompt.trim();
 
-      // download it locally so you can inspect it
-      // const maskURL = URL.createObjectURL(maskBlob);
-      // console.log('📥 Mask URL:', maskURL);
-      // const a = document.createElement('a');
-      // a.href = maskURL;
-      // a.download = 'mask.png';
-      // document.body.appendChild(a);
-      // a.click();
-      // document.body.removeChild(a);
-      // URL.revokeObjectURL(maskURL);
+    try {
+      const maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
 
       // now build your form
       const form = new FormData();
       form.append('image', file);
       form.append('mask', maskBlob, 'mask.png');
-      form.append('prompt', prompt);
+      form.append('prompt', finalPrompt);
       form.append('size', size);
-      console.log('📦 FormData prepared:', { image: file, mask: maskBlob, prompt, size });
 
       // send it off
       console.log('🚀 Sending POST to', `${import.meta.env.VITE_API_URL}/api/edit`);
@@ -120,7 +107,6 @@ export default function App() {
       setEditedUrl(`data:image/png;base64,${b64_json}`);
     } catch (err) {
       console.error('⚠️ handleEdit caught error:', err);
-      alert(`Edit error: ${err.message}`);
     } finally {
       console.log('⏹️ handleEdit complete, loading false');
       setLoading(false);
@@ -173,7 +159,7 @@ export default function App() {
 
     const uiCtx = uiCanvasRef.current.getContext('2d');
     uiCtx.globalCompositeOperation = 'source-over';
-    uiCtx.strokeStyle = 'rgba(0,200,255,0.4)';
+    uiCtx.strokeStyle = 'rgba(0,200,255,0.05)';
     uiCtx.lineWidth = brushSize * 2;
     uiCtx.lineCap   = 'round';
     uiCtx.beginPath();
@@ -209,6 +195,8 @@ export default function App() {
 
   const [pw, ph] = size.split('x').map(Number);
 
+  const navigate = useNavigate();
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header */}
@@ -217,11 +205,12 @@ export default function App() {
         style={{
           background: 'linear-gradient(to right,#FF8F00, #EE66A6, #640D5F)'
         }}
-      >
+      > 
         <h1
-          className="text-3xl font-bold text-white"
+          className="text-3xl font-bold text-white cursor-pointer"
           style={{ fontFamily: 'Sacramento,cursive' }}
-        >
+          onClick={() => navigate('/')}
+          >
           Vision Forge
         </h1>
       </header>
@@ -384,7 +373,7 @@ export default function App() {
                   ref={imgRef}
                   src={previewUrl}
                   alt="Original"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain rounded-lg"
                   onLoad={updateCanvasSize}
                 />
 
@@ -446,35 +435,13 @@ export default function App() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">Generated Image</h2>
             <div className="flex space-x-2">
-              {/* Save Draft icon button */}
-              <button
-                type="button"
-                onClick={saveDraft}
-                disabled={!editedUrl}
-                title={!editedUrl ? 'No image to save' : 'Save Draft'}
-                className={`
-                  p-2 rounded-full  dark:bg-indigo-100   
-                  ${!editedUrl
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-indigo-100 active:bg-indigo-200'}
-                `}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 448 512"
-                  className="h-5 w-5 text-indigo-600"
-                  fill="currentColor"
-                >
-                  <path d="M433.9 129.9l-83.9-83.9A48 48 0 0 0 316.1 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V163.9a48 48 0 0 0 -14.1-33.9zM224 416c-35.3 0-64-28.7-64-64 0-35.3 28.7-64 64-64s64 28.7 64 64c0 35.3-28.7 64-64 64zm96-304.5V212c0 6.6-5.4 12-12 12H76c-6.6 0-12-5.4-12-12V108c0-6.6 5.4-12 12-12h228.5c3.2 0 6.2 1.3 8.5 3.5l3.5 3.5A12 12 0 0 1 320 111.5z"/>
-                </svg>
-              </button>
               {/* Download icon button */}
               <a
                 href={editedUrl || '#'}
                 download="vision-forge-edit.png"
                 title={!editedUrl ? 'No image to download' : 'Download Image'}
                 className={`
-                  p-2 rounded-full dark:bg-indigo-100   
+                  p-2 rounded-full dark:bg-indigo-100  mr-2  
                   ${!editedUrl
                     ? 'bg-gray-200 opacity-50 cursor-not-allowed'
                     : 'hover:bg-indigo-100 active:bg-indigo-200'}
@@ -494,8 +461,7 @@ export default function App() {
 
           {/* Preview / Placeholder */}
           <div
-            className="w-full overflow-hidden rounded-lg"
-            style={{ aspectRatio: `${pw} / ${ph}` }}
+            className="w-full overflow-hidden rounded-lg flex items-center justify-center"
           >
             {editedUrl ? ( 
               <img
@@ -507,6 +473,7 @@ export default function App() {
               <div
                 className="w-full h-full flex items-center justify-center
                           border-2 border-dashed border-gray-300 rounded-lg"
+                style={{ aspectRatio: `${pw} / ${ph}` }}
               >
                 <span className="text-gray-600">
                   No generated image to preview
