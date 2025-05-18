@@ -59,22 +59,22 @@ export default function LandingPage() {
 
 
         {/* Hero – full-width yellow bg */}
-        <section className="relative bg-yellow-50 py-24 overflow-hidden rounded-xl">
+        <section className="relative bg-yellow-50 mt-10 mb-10 py-25 md:py-30 overflow-hidden rounded-xl">
             {/* Decorative side images */}
             <img
-                src="image/left-decorative.jpg"
+                src="/left-decorative.jpg"
                 alt="Left decorative"
                 className="pl-10 absolute top-0 left-0 w-80 h-96 object-cover rounded-lg transform -translate-x-1/4 -translate-y-1/4"
             />
             <img
-                src="image/right-decorative.jpg"
+                src="/right-decorative.jpg"
                 alt="Right decorative"
                 className="absolute bottom-0 right-0 w-80 h-96 object-cover rounded-lg transform translate-x-1/4 translate-y-1/4"
             />
             {/* Card wrapper – centered & constrained */}
             <div className="relative mx-auto max-w-5xl px-4 md:px-6">
                 {/* White card */}
-                <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+                <div className="bg-white rounded-2xl shadow-xl p-12 md:p-14 text-center">
                     <h2 className="text-3xl md:text-4xl font-bold mb-4">
                       Simplify every photo edit with AI and a single prompt
                     </h2>
@@ -121,7 +121,6 @@ export default function LandingPage() {
                         Upload your image
                       </label>
                     </div>
-                <p className="text-gray-500 mt-3">or drop it here</p>
                 </div>
             </div>
         </section>
@@ -133,7 +132,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center md:space-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
               <img
-                src="image/info-image1.png"
+                src="/info-image1.png"
                 alt="Info section illustration"
                 className="w-full h-100 object-cover rounded-2xl"
               />
@@ -153,7 +152,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row-reverse items-center md:gap-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
               <img
-                src="image/info-image2.png"
+                src="/info-image2.png"
                 alt="Example of single-prompt edit"
                 className="w-full h-auto rounded-lg"
               />
@@ -171,17 +170,21 @@ export default function LandingPage() {
           {/* 3: Image Left */}
           <div className="flex flex-col md:flex-row items-center md:space-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
-              <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-                <span className="text-gray-500">Image Placeholder</span>
-              </div>
+              <img
+                src="/info-image3.png"
+                alt="Info section illustration"
+                className="w-full h-100 object-cover rounded-2xl"
+              />
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Talk about Brush </h3>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
-            </div>
+              <h3 className="text-2xl font-semibold mb-4">
+                Pinpoint Accuracy with the AI Brush
+              </h3>
+              <p className="text-gray-700">
+                With a simple brush stroke over your chosen area Vision Forge zeroes in on exactly what you want to change delivering cleaner results without touching the rest of the image It saves you time and gives you professional-level precision so every edit looks seamless and intentional
+              </p>
+          </div>
+
           </div>
         </section>
 
@@ -192,7 +195,7 @@ export default function LandingPage() {
           <div className="max-w-8xl mx-auto px-8 md:px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             {/* Left: Instruction Image */}
             <img
-              src="image/instruction.png"
+              src="/instruction.png"
               alt="Instruction preview"
               className="w-full h-auto max-h-[600px] object-cover rounded-lg"
             />
