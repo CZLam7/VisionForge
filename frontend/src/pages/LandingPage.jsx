@@ -62,12 +62,12 @@ export default function LandingPage() {
         <section className="relative bg-yellow-50 py-24 overflow-hidden rounded-xl">
             {/* Decorative side images */}
             <img
-                src="image/left-decorative.jpg"
+                src="public/left-decorative.jpg"
                 alt="Left decorative"
                 className="pl-10 absolute top-0 left-0 w-80 h-96 object-cover rounded-lg transform -translate-x-1/4 -translate-y-1/4"
             />
             <img
-                src="image/right-decorative.jpg"
+                src="public/right-decorative.jpg"
                 alt="Right decorative"
                 className="absolute bottom-0 right-0 w-80 h-96 object-cover rounded-lg transform translate-x-1/4 translate-y-1/4"
             />
