@@ -139,29 +139,35 @@ export default function LandingPage() {
               />
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Talk about using AI to generate image efficiently</h3>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
-              <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
-              <p className="text-gray-700 mb-2">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
+              <h3 className="text-2xl font-semibold mb-4">
+                Harness AI for Effortless Image Editing
+              </h3>
+              <p className="text-gray-700">
+                Vision Forge enables instant edits - swap or blur backgrounds, adjust facial expressions, enhance lighting and color balance, remove unwanted objects or people, apply realistic texture smoothing, and even transform the overall style of your image all with a single click, so you can refine and perfect photos faster than ever.
+              </p>
             </div>
+
           </div>
 
           {/* 2: Image Right */}
-          <div className="flex flex-col md:flex-row-reverse md:flex-row items-center md:gap-x-12">
+          <div className="flex flex-col md:flex-row-reverse items-center md:gap-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
-              <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-                <span className="text-gray-500">Image Placeholder</span>
-              </div>
+              <img
+                src="image/info-image2.png"
+                alt="Example of single-prompt edit"
+                className="w-full h-auto rounded-lg"
+              />
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Single Prompt </h3>
-              <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
-              <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
-              <p className="text-gray-700 mb-2">Praesent convallis tortor et enim feugiat gravida.</p>
-              <p className="text-gray-700">Integer feugiat scelerisque varius morbi enim nunc faucibus.</p>
+              <h3 className="text-2xl font-semibold mb-4">
+                Transform Photos with a Single Command
+              </h3>
+              <p className="text-gray-700">
+                With a single natural language instruction such as “turn this scene into a moonlit night”, “brighten her smile” or “remove background distractions”, Vision Forge’s NLP immediately understands your intent, performs all the edits behind the scenes including masking, color correction, object removal and relighting, and delivers a polished high quality image in seconds without the need for layers or sliders.
+              </p>
             </div>
           </div>
+
           {/* 3: Image Left */}
           <div className="flex flex-col md:flex-row items-center md:space-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
