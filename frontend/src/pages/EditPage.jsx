@@ -1,44 +1,45 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 
 export default function App() {
-  const [file,       setFile]       = useState(null);
+  // --- Existing States ---
+  const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [prompt,     setPrompt]     = useState('');
-  const [brushSize,  setBrushSize]  = useState('M');
-  const [loading,    setLoading]    = useState(false);
-  const [editedUrl,  setEditedUrl]  = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [brushSize, setBrushSize] = useState(50);
+  const [loading, setLoading] = useState(false);
+  const [editedUrl, setEditedUrl] = useState('');
   const [size, setSize] = useState('1024x1024');
 
-  const { state } = useLocation()
-  const initialFile = state?.file ?? null
+  // --- Masking States ---
+  const [brushActive, setBrushActive] = useState(false);
+  const [maskData, setMaskData] = useState(null); // optional: store final mask blob
+  const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const [hovering, setHovering] = useState(false);
+  const [painting, setPainting] = useState(false);
+
+  // --- Refs ---
+  const imgRef = useRef(null);
+  const uiCanvasRef = useRef(null);  // for on-screen blue overlay
+  const maskCanvasRef = useRef(null); // for the hidden mask
+  const { state } = useLocation();
+  const initialFile = state?.file ?? null;
+
   useEffect(() => {
     if (initialFile) {
-      setFile(initialFile) 
-      setPreviewUrl(URL.createObjectURL(initialFile))
+      setFile(initialFile);
+      setPreviewUrl(URL.createObjectURL(initialFile));
     }
   }, [initialFile]);
 
-  // —— New state for brush mode & mask data ——
-  const [brushActive, setBrushActive] = useState(false);
-  const [maskData,    setMaskData]    = useState(null);
-
-  // —— Handler to toggle brush on/off ——  
-  const toggleBrush = () => {
-    setBrushActive(!brushActive);
-  };
-
-  // —— Handler to clear the current selection mask ——
+  // --- Handlers ---
+  const toggleBrush = () => setBrushActive(active => !active);
   const clearSelection = () => {
-    if (!maskData) {
-      // optionally show tooltip: "Nothing to clear"
-      return;
-    }
     setMaskData(null);
-    // also clear any canvas overlay if you have one
+    // Remove old mask from canvas
+    const ctx = uiCanvasRef.current?.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, uiCanvasRef.current.width, uiCanvasRef.current.height);
   };
-
-  // —— Your existing handlers ——  
   const resetAll = () => {
     setFile(null);
     setPreviewUrl('');
@@ -50,53 +51,151 @@ export default function App() {
     setEditedUrl('');
   };
 
-  const saveDraft = () => {};
-
-
-  const handleFileChange = (e) => {
+  const handleFileChange = e => {
     const img = e.target.files?.[0] ?? null;
     if (img) {
-      // create a stable preview URL
-      const url = URL.createObjectURL(img);
-  
-      // set file & preview; we don’t need origRatio any more
       setFile(img);
-      setPreviewUrl(url);
-      setEditedUrl('');
+      setPreviewUrl(URL.createObjectURL(img));
       setBrushActive(false);
       setMaskData(null);
-  
-      // NOTE: if you want to free memory later, you can revoke this URL
-      // when the component unmounts or when a new file is chosen.
-      // e.g. URL.revokeObjectURL(previousUrl);
     }
   };
-  
-  const [pw, ph] = size.split('x').map(Number);
+
   const handleEdit = async () => {
     if (!file || !prompt) return;
     setLoading(true);
+
+    // first, make sure the mask canvas ref is there
+    const maskCanvas = maskCanvasRef.current;
+    const uiCanvas   = uiCanvasRef.current;
+    console.log('UI Canvas:', uiCanvas, 'Mask Canvas:', maskCanvas);
+    if (!maskCanvas) {
+      console.error('❌ maskCanvasRef is null!');
+      setLoading(false);
+      return;
+    }
+
+    const finalPrompt = maskData
+      ? `${prompt.trim()} at the selected area`
+      : prompt.trim();
+
     try {
+      const maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
+
+      // now build your form
       const form = new FormData();
       form.append('image', file);
-      form.append('prompt', prompt);
-      form.append('size', size);    
-  
-      console.log(`Calling API with size=${size}…`);
+      form.append('mask', maskBlob, 'mask.png');
+      form.append('prompt', finalPrompt);
+      form.append('size', size);
+
+      // send it off
+      console.log('🚀 Sending POST to', `${import.meta.env.VITE_API_URL}/api/edit`);
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/edit`, {
         method: 'POST',
         body: form
       });
-      if (!res.ok) throw new Error(await res.text());
+      console.log('📶 Response status:', res.status, res.statusText);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('❌ Edit error response body:', text);
+        throw new Error(text);
+      }
+
       const { b64_json } = await res.json();
+      console.log('🎉 Edit succeeded, b64 length:', b64_json.length);
       setEditedUrl(`data:image/png;base64,${b64_json}`);
     } catch (err) {
-      console.error(err);
-      alert(`Edit error: ${err.message}`);
+      console.error('⚠️ handleEdit caught error:', err);
     } finally {
+      console.log('⏹️ handleEdit complete, loading false');
       setLoading(false);
     }
   };
+
+  // --- Canvas Setup & Painting ---
+  const displaySize = 10 + (brushSize / 100) * 20;
+
+  function updateCanvasSize() {
+    const img = imgRef.current;
+    if (!img) return;
+    [uiCanvasRef, maskCanvasRef].forEach(ref => {
+      const c = ref.current;
+      c.width  = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.style.width  = img.clientWidth + 'px';
+      c.style.height = img.clientHeight + 'px';
+    });
+
+    const mc = maskCanvasRef.current.getContext('2d');
+    mc.clearRect(0, 0, mc.canvas.width, mc.canvas.height);
+    mc.fillStyle = '#ffffff';
+    mc.drawImage(img, 0, 0, mc.canvas.width, mc.canvas.height);
+  }
+
+  useEffect(() => {
+    updateCanvasSize();
+  }, [previewUrl]);
+
+
+  useEffect(() => {
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  },);
+
+  function getCanvasCoords(e) {
+    const c    = uiCanvasRef.current;
+    const rect = c.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (c.width  / rect.width),
+      y: (e.clientY - rect.top ) * (c.height / rect.height),
+    };
+  }
+
+  // 2) Handle painting on both canvases:
+  function startPaint(e) {
+    setPainting(true);
+    const { x, y } = getCanvasCoords(e);
+
+    const uiCtx = uiCanvasRef.current.getContext('2d');
+    uiCtx.globalCompositeOperation = 'source-over';
+    uiCtx.strokeStyle = 'rgba(0,200,255,0.05)';
+    uiCtx.lineWidth = brushSize * 2;
+    uiCtx.lineCap   = 'round';
+    uiCtx.beginPath();
+    uiCtx.moveTo(x, y);
+
+    const mCtx = maskCanvasRef.current.getContext('2d');
+    mCtx.globalCompositeOperation = 'destination-out';
+    mCtx.lineWidth = brushSize * 2;
+    mCtx.lineCap   = 'round';
+    mCtx.beginPath();
+    mCtx.moveTo(x, y);
+  }
+
+  function paint(e) {
+    if (!painting) return;
+    const { x, y } = getCanvasCoords(e);
+
+    const uiCtx = uiCanvasRef.current.getContext('2d');
+    uiCtx.lineTo(x, y);
+    uiCtx.stroke();
+
+    const mCtx = maskCanvasRef.current.getContext('2d');
+    mCtx.lineTo(x, y);
+    mCtx.stroke();
+  }
+
+  function endPaint() {
+    setPainting(false);
+    setMaskData(maskCanvasRef.current.toDataURL('image/png'));
+  }
+
+
+
+  const [pw, ph] = size.split('x').map(Number);
+
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -106,14 +205,16 @@ export default function App() {
         style={{
           background: 'linear-gradient(to right,#FF8F00, #EE66A6, #640D5F)'
         }}
-      >
+      > 
         <h1
-          className="text-3xl font-bold text-white"
+          className="text-3xl font-bold text-white cursor-pointer"
           style={{ fontFamily: 'Sacramento,cursive' }}
-        >
+          onClick={() => navigate('/')}
+          >
           Vision Forge
         </h1>
       </header>
+
 
       <div className="flex-1 w-full mx-auto flex flex-col lg:flex-row gap-6 px-4 lg:px-8  mb-6 overflow-auto pb-4">
         {/* Col 1: Controls */}
@@ -132,32 +233,21 @@ export default function App() {
             </span>
           </div>
 
-          {/* Row 2: Brush Button + Brush Size Slider */}
+          {/* Row 2: Brush Button + Brush Size Slider + Live Preview */}
           <div className="flex items-center space-x-4">
-            {/* Brush Button with SVG icon & active styling */}
+            {/* Brush Button */}
             <button
               onClick={toggleBrush}
               className={`
                 flex items-center space-x-2 px-4 py-2 border rounded
-                ${ brushActive 
-                      ? 'bg-gray-300'    // darker when active
-                      : 'bg-gray-100'    // lighter when inactive
-                }
+                ${brushActive ? 'bg-gray-300' : 'bg-gray-100'}
               `}
             >
-              {/* Simple inline “paint brush” SVG */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M7.05 17.67l-3.72 3.72a1 1 0 0 0 1.42 1.42l3.72-3.72-1.42-1.42zM20.71 5.63a1 1 0 0 0-1.42 0l-2.83 2.83 1.42 1.42 2.83-2.83a1 1 0 0 0 0-1.42zM3 21h6v-2H5v-4H3v6zm18-18h-6v2h4v4h2V3zM8.5 15.5l7-7 1.5 1.5-7 7H8.5v-1.5z"/>
-              </svg>
-
+              {/* SVG omitted for brevity */}
               <span className="font-medium text-sm">Brush</span>
             </button>
 
+            {/* Slider */}
             <input
               type="range"
               min="5"
@@ -165,12 +255,21 @@ export default function App() {
               value={brushSize}
               onChange={e => setBrushSize(Number(e.target.value))}
               disabled={!brushActive}
-              title={!brushActive
-                  ? 'Activate Brush to adjust size'
-                  : ''
-              }
-              className={`flex-1 ${brushActive ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}            />
+              title={!brushActive ? 'Activate Brush to adjust size' : ''}
+              className={`flex-1 ${brushActive ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+            />
+
+            {/* Live size preview */}
+            <div
+              className="rounded-full bg-purple-600 opacity-50"
+              style={{
+                width:  `${displaySize}px`,
+                height: `${displaySize}px`,
+                transition: 'width 0.1s, height 0.1s'
+              }}
+            />
           </div>
+
           
           {/* Prompt with inline “Clear Text” */}
           <div className="space-y-2">
@@ -252,49 +351,82 @@ export default function App() {
 
         {/* Col 2: Original Image */}
         <section className="w-full lg:w-[37.5%] bg-white rounded-2xl shadow p-6 flex flex-col">
-          {/* Title + Reupload */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">Target Image</h2>
             <button
-              type="button"
               onClick={resetAll}
               disabled={!file}
-              title={!file ? 'Nothing to reupload' : 'Reupload Image (resets prompt & ratio)'}
-              className={`p-2 rounded-full dark:bg-indigo-100   ${
-                !file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-100 active:bg-indigo-200'}
-              }`}
-            >
-              ↻
-            </button>
+              className={`p-2 rounded-full ${!file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-100 active:bg-indigo-200'}`}
+            >↻</button>
           </div>
 
-          {/* Upload / Preview – fill remaining space */}
           <div className="flex-1">
             {!file ? (
-              <label
-                className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400"
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  disabled={loading}
-                />
+              <label className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={loading} />
                 <span className="text-gray-600">Click or drag &amp; drop to upload</span>
               </label>
             ) : (
-              <div className="h-full overflow-hidden rounded-lg">
+              <div className="relative h-full overflow-hidden rounded-lg">
+                {/* your real image */}
                 <img
+                  ref={imgRef}
                   src={previewUrl}
                   alt="Original"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain rounded-lg"
+                  onLoad={updateCanvasSize}
                 />
-                {/* TODO: mask canvas overlay here */}
+
+                {/* 1) UI Canvas (visible) */}
+                <canvas
+                  ref={uiCanvasRef}
+                  className="absolute inset-0 z-10"
+                  onPointerDown={startPaint}
+                  onPointerMove={e => {
+                    paint(e)
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                  }}
+                  onPointerUp={endPaint}
+                  onPointerLeave={e => { endPaint(); setHovering(false) }}
+                  onPointerEnter={e => setHovering(true)}
+                  style={{ pointerEvents: brushActive ? 'auto' : 'none' }}
+                />
+
+                {/* 2) Mask Canvas (hidden) */}
+                <canvas
+                  ref={maskCanvasRef}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ opacity: 0, pointerEvents: 'none' }}
+                />
+
+                {/* Live brush cursor preview (optional) */}
+                {brushActive && hovering && (() => {
+                  const c = uiCanvasRef.current
+                  const scale  = c.clientWidth / c.width
+                  const radius = brushSize * scale
+
+                  return (
+                    <div
+                      className="absolute"
+                      style={{
+                        left:  pointer.x - radius,
+                        top:   pointer.y - radius,
+                        width: radius * 2,
+                        height: radius * 2,
+                        border:       '2px solid rgba(156,163,175,0.8)',
+                        borderRadius: '50%',
+                        pointerEvents:'none',
+                        mixBlendMode: 'difference',
+                      }}
+                    />
+                  )
+                })()}
               </div>
             )}
           </div>
         </section>
+
 
 
         {/* Col 3: Generated Image */}
@@ -303,35 +435,13 @@ export default function App() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">Generated Image</h2>
             <div className="flex space-x-2">
-              {/* Save Draft icon button */}
-              <button
-                type="button"
-                onClick={saveDraft}
-                disabled={!editedUrl}
-                title={!editedUrl ? 'No image to save' : 'Save Draft'}
-                className={`
-                  p-2 rounded-full  dark:bg-indigo-100   
-                  ${!editedUrl
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-indigo-100 active:bg-indigo-200'}
-                `}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 448 512"
-                  className="h-5 w-5 text-indigo-600"
-                  fill="currentColor"
-                >
-                  <path d="M433.9 129.9l-83.9-83.9A48 48 0 0 0 316.1 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V163.9a48 48 0 0 0 -14.1-33.9zM224 416c-35.3 0-64-28.7-64-64 0-35.3 28.7-64 64-64s64 28.7 64 64c0 35.3-28.7 64-64 64zm96-304.5V212c0 6.6-5.4 12-12 12H76c-6.6 0-12-5.4-12-12V108c0-6.6 5.4-12 12-12h228.5c3.2 0 6.2 1.3 8.5 3.5l3.5 3.5A12 12 0 0 1 320 111.5z"/>
-                </svg>
-              </button>
               {/* Download icon button */}
               <a
                 href={editedUrl || '#'}
                 download="vision-forge-edit.png"
                 title={!editedUrl ? 'No image to download' : 'Download Image'}
                 className={`
-                  p-2 rounded-full dark:bg-indigo-100   
+                  p-2 rounded-full dark:bg-indigo-100  mr-2  
                   ${!editedUrl
                     ? 'bg-gray-200 opacity-50 cursor-not-allowed'
                     : 'hover:bg-indigo-100 active:bg-indigo-200'}
@@ -351,8 +461,7 @@ export default function App() {
 
           {/* Preview / Placeholder */}
           <div
-            className="w-full overflow-hidden rounded-lg"
-            style={{ aspectRatio: `${pw} / ${ph}` }}
+            className="w-full overflow-hidden rounded-lg flex items-center justify-center"
           >
             {editedUrl ? ( 
               <img
@@ -364,6 +473,7 @@ export default function App() {
               <div
                 className="w-full h-full flex items-center justify-center
                           border-2 border-dashed border-gray-300 rounded-lg"
+                style={{ aspectRatio: `${pw} / ${ph}` }}
               >
                 <span className="text-gray-600">
                   No generated image to preview

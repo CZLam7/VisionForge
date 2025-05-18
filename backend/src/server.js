@@ -45,37 +45,69 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 });
 
 // ── 2) Edit an existing image ──────────────────────────────────────────
-app.post('/api/edit', upload.single('image'), async (req, res) => {
-  const promptText = req.body.prompt;
-  const file       = req.file;
-  const size       = req.body.size || '1024x1024';
-  if (!promptText || !file) {
-    return res.status(400).json({ error: 'Missing prompt or image file' });
-  }
-  try {
-    const fileForAPI = await toFile(
-      fs.createReadStream(file.path),
-      file.originalname,
-      { type: file.mimetype }
-    );
-    const response = await openai.images.edit({
-      model:    'gpt-image-1',
-      prompt:   promptText,
-      n:        1,
-      size:     size,
-      image:    fileForAPI
-    });
-    fs.unlinkSync(file.path);
+app.post(
+  '/api/edit',
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'mask',  maxCount: 1 }
+  ]),
+  async (req, res) => {
+    const promptText = req.body.prompt;
+    const size       = req.body.size || '1024x1024';
 
-    // just send back the b64_json (or include the file name if you like)
-    const b64 = response.data[0].b64_json;
-    return res.json({ b64_json: b64 });
-  } catch (err) {
-    console.error('Edit error:', err);
-    if (file?.path) fs.unlinkSync(file.path);
-    return res.status(500).json({ error: err.message });
+    // Pull out the uploaded files
+    const imageFile = req.files.image?.[0];
+    const maskFile  = req.files.mask?.[0];
+
+    if (!promptText || !imageFile) {
+      return res.status(400).json({ error: 'Missing prompt or image file' });
+    }
+
+    try {
+      // Convert the main image to OpenAI’s file format
+      const imageForAPI = await toFile(
+        fs.createReadStream(imageFile.path),
+        imageFile.originalname,
+        { type: imageFile.mimetype }
+      );
+
+      let maskForAPI;
+      if (maskFile) {
+        // Convert the painted mask to OpenAI’s file format
+        maskForAPI = await toFile(
+          fs.createReadStream(maskFile.path),
+          maskFile.originalname,
+          { type: maskFile.mimetype }
+        );
+      }
+
+      // Call the edits endpoint with both image + mask
+      const response = await openai.images.edit({
+        model:  'gpt-image-1',
+        prompt: promptText,
+        n:      1,
+        size:   size,
+        image:  imageForAPI,
+        mask:   maskForAPI   
+      });
+
+      // Clean up temp files
+      fs.unlinkSync(imageFile.path);
+      if (maskFile?.path) fs.unlinkSync(maskFile.path);
+
+      // Return the base64-encoded result
+      const b64 = response.data[0].b64_json;
+      return res.json({ b64_json: b64 });
+
+    } catch (err) {
+      console.error('Edit error:', err);
+      if (imageFile?.path) fs.unlinkSync(imageFile.path);
+      if (maskFile?.path)  fs.unlinkSync(maskFile.path);
+      return res.status(500).json({ error: err.message });
+    }
   }
-});
+);
+
 
 
 // ── Start server ────────────────────────────────────────────────────────
