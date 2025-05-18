@@ -1,44 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 export default function App() {
-  const [file,       setFile]       = useState(null);
+  // --- Existing States ---
+  const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [prompt,     setPrompt]     = useState('');
-  const [brushSize,  setBrushSize]  = useState('M');
-  const [loading,    setLoading]    = useState(false);
-  const [editedUrl,  setEditedUrl]  = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [brushSize, setBrushSize] = useState(50);
+  const [loading, setLoading] = useState(false);
+  const [editedUrl, setEditedUrl] = useState('');
   const [size, setSize] = useState('1024x1024');
 
-  const { state } = useLocation()
-  const initialFile = state?.file ?? null
+  // --- Masking States ---
+  const [brushActive, setBrushActive] = useState(false);
+  const [maskData, setMaskData] = useState(null); // optional: store final mask blob
+  const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const [hovering, setHovering] = useState(false);
+  const [painting, setPainting] = useState(false);
+
+  // --- Refs ---
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  const { state } = useLocation();
+  const initialFile = state?.file ?? null;
+
   useEffect(() => {
     if (initialFile) {
-      setFile(initialFile) 
-      setPreviewUrl(URL.createObjectURL(initialFile))
+      setFile(initialFile);
+      setPreviewUrl(URL.createObjectURL(initialFile));
     }
   }, [initialFile]);
 
-  // —— New state for brush mode & mask data ——
-  const [brushActive, setBrushActive] = useState(false);
-  const [maskData,    setMaskData]    = useState(null);
-
-  // —— Handler to toggle brush on/off ——  
-  const toggleBrush = () => {
-    setBrushActive(!brushActive);
-  };
-
-  // —— Handler to clear the current selection mask ——
+  // --- Handlers ---
+  const toggleBrush = () => setBrushActive(active => !active);
   const clearSelection = () => {
-    if (!maskData) {
-      // optionally show tooltip: "Nothing to clear"
-      return;
-    }
     setMaskData(null);
-    // also clear any canvas overlay if you have one
+    // Remove old mask from canvas
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   };
-
-  // —— Your existing handlers ——  
   const resetAll = () => {
     setFile(null);
     setPreviewUrl('');
@@ -49,40 +50,30 @@ export default function App() {
     setMaskData(null);
     setEditedUrl('');
   };
-
   const saveDraft = () => {};
-  const displaySize = 10 + (brushSize / 100) * 20;
 
-  const handleFileChange = (e) => {
+  const handleFileChange = e => {
     const img = e.target.files?.[0] ?? null;
     if (img) {
-      // create a stable preview URL
-      const url = URL.createObjectURL(img);
-  
-      // set file & preview; we don’t need origRatio any more
       setFile(img);
-      setPreviewUrl(url);
-      setEditedUrl('');
+      setPreviewUrl(URL.createObjectURL(img));
       setBrushActive(false);
       setMaskData(null);
-  
-      // NOTE: if you want to free memory later, you can revoke this URL
-      // when the component unmounts or when a new file is chosen.
-      // e.g. URL.revokeObjectURL(previousUrl);
     }
   };
-  
-  const [pw, ph] = size.split('x').map(Number);
+
   const handleEdit = async () => {
     if (!file || !prompt) return;
     setLoading(true);
+    // capture mask blob
+    const maskBlob = await new Promise(r => canvasRef.current.toBlob(r, 'image/png'));
     try {
       const form = new FormData();
       form.append('image', file);
+      form.append('mask', maskBlob, 'mask.png');
       form.append('prompt', prompt);
-      form.append('size', size);    
-  
-      console.log(`Calling API with size=${size}…`);
+      form.append('size', size);
+
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/edit`, {
         method: 'POST',
         body: form
@@ -97,6 +88,84 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // --- Canvas Setup & Painting ---
+  const updateCanvasSize = () => {
+    const img = imgRef.current;
+    const c = canvasRef.current;
+    if (!img || !c) return;
+    // match buffer to image natural size
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    // scale CSS to fit container
+    c.style.width = img.clientWidth + 'px';
+    c.style.height = img.clientHeight + 'px';
+    c.style.pointerEvents = brushActive ? 'auto' : 'none';
+  };
+
+  useEffect(() => {
+    if (brushActive) {
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      // ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      // ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  }, [brushActive]);
+
+  useEffect(() => {
+    updateCanvasSize();
+  }, [previewUrl, brushActive]);
+
+  const displaySize = 10 + (brushSize / 100) * 20;
+
+  useEffect(() => {
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  },);
+
+  function getCanvasCoords(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (canvas.width  / rect.width),
+      y: (e.clientY - rect.top ) * (canvas.height / rect.height)
+    };
+  }
+
+  function startPaint(e) {
+    setPainting(true);
+    const c   = canvasRef.current;
+    const ctx = c.getContext('2d');
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgb(123, 200, 233, 0.04)';
+    ctx.lineWidth   = brushSize * 2;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+
+    // begin the path exactly at the pointer
+    const { x, y } = getCanvasCoords(e, c);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  }
+  function endPaint() {
+    setPainting(false);
+    const ctx = canvasRef.current.getContext('2d');
+    // reset back to default if needed
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function paint(e) {
+    console.log('painting?', painting);
+    if (!painting) return;
+    const c   = canvasRef.current;
+    const ctx = c.getContext('2d');
+
+    const { x, y } = getCanvasCoords(e, c);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+
+
+  const [pw, ph] = size.split('x').map(Number);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -114,6 +183,7 @@ export default function App() {
           Vision Forge
         </h1>
       </header>
+
 
       <div className="flex-1 w-full mx-auto flex flex-col lg:flex-row gap-6 px-4 lg:px-8  mb-6 overflow-auto pb-4">
         {/* Col 1: Controls */}
@@ -250,49 +320,80 @@ export default function App() {
 
         {/* Col 2: Original Image */}
         <section className="w-full lg:w-[37.5%] bg-white rounded-2xl shadow p-6 flex flex-col">
-          {/* Title + Reupload */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">Target Image</h2>
             <button
-              type="button"
               onClick={resetAll}
               disabled={!file}
-              title={!file ? 'Nothing to reupload' : 'Reupload Image (resets prompt & ratio)'}
-              className={`p-2 rounded-full dark:bg-indigo-100   ${
-                !file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-100 active:bg-indigo-200'}
-              }`}
-            >
-              ↻
-            </button>
+              className={`p-2 rounded-full ${!file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-100 active:bg-indigo-200'}`}
+            >↻</button>
           </div>
 
-          {/* Upload / Preview – fill remaining space */}
           <div className="flex-1">
             {!file ? (
-              <label
-                className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400"
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  disabled={loading}
-                />
+              <label className="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={loading} />
                 <span className="text-gray-600">Click or drag &amp; drop to upload</span>
               </label>
             ) : (
-              <div className="h-full overflow-hidden rounded-lg">
+              <div className="relative h-full overflow-hidden rounded-lg">
+                {/* Remove old placeholder <img> */}
                 <img
+                  ref={imgRef}
                   src={previewUrl}
                   alt="Original"
                   className="w-full h-full object-contain"
+                  onLoad={updateCanvasSize}
                 />
-                {/* TODO: mask canvas overlay here */}
+                {/* Remove any existing mask placeholder */}
+
+                {/* Add canvas overlay for drawing */}
+                <canvas
+                  ref={canvasRef}
+                  className="absolute inset-0"
+                  onPointerDown={startPaint}
+                  onPointerMove={e => {
+                    paint(e);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+                  }}
+                  onPointerUp={endPaint}
+                  onPointerLeave={e => { endPaint(); setHovering(false); }}
+                  onPointerEnter={e => setHovering(true)}
+                />
+
+                {/* Live brush cursor preview (remove if undesired) */}
+                {brushActive && hovering && (() => {
+                  const c = canvasRef.current;
+                  // how many CSS px per canvas px
+                  const scale = c.clientWidth / c.width;
+                  // radius in CSS px
+                  const radius = brushSize * scale;
+
+                  return (
+                    <div
+                      className="absolute"
+                      style={{
+                        // use pointer.x/y (CSS px) directly here:
+                        left:  pointer.x - radius,
+                        top:   pointer.y - radius,
+                        width:  radius * 2,
+                        height: radius * 2,
+                        border:        '2px solid rgba(156,163,175,0.8)',
+                        borderRadius:  '50%',
+                        pointerEvents: 'none',
+                        mixBlendMode:  'difference',
+                      }}
+                    />
+                  );
+                })()}
+
+
               </div>
             )}
           </div>
         </section>
+
 
 
         {/* Col 3: Generated Image */}
