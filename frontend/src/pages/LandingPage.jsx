@@ -134,7 +134,7 @@ export default function LandingPage() {
               <img
                 src="/info-image1.png"
                 alt="Info section illustration"
-                className="w-full h-100 object-cover rounded-2xl"
+                className="w-full h-90 xl:h-120 object-cover rounded-2xl"
               />
             </div>
             <div className="md:w-1/2">
@@ -154,7 +154,7 @@ export default function LandingPage() {
               <img
                 src="/info-image2.png"
                 alt="Example of single-prompt edit"
-                className="w-full h-100 rounded-lg"
+                className="w-full h-90 xl:h-120 rounded-lg"
               />
             </div>
             <div className="md:w-1/2">
@@ -173,7 +173,7 @@ export default function LandingPage() {
               <img
                 src="/info-image3.png"
                 alt="Info section illustration"
-                className="w-full h-100 object-cover rounded-2xl"
+                className="w-full h-90 xl:h-120 object-cover rounded-2xl"
               />
             </div>
             <div className="md:w-1/2">
