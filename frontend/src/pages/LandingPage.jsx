@@ -59,7 +59,7 @@ export default function LandingPage() {
 
 
         {/* Hero – full-width yellow bg */}
-        <section className="relative bg-yellow-50 py-24 overflow-hidden rounded-xl">
+        <section className="relative bg-yellow-50 mt-10 mb-10 py-25 md:py-30 overflow-hidden rounded-xl">
             {/* Decorative side images */}
             <img
                 src="/left-decorative.jpg"
@@ -74,7 +74,7 @@ export default function LandingPage() {
             {/* Card wrapper – centered & constrained */}
             <div className="relative mx-auto max-w-5xl px-4 md:px-6">
                 {/* White card */}
-                <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+                <div className="bg-white rounded-2xl shadow-xl p-12 md:p-14 text-center">
                     <h2 className="text-3xl md:text-4xl font-bold mb-4">
                       Simplify every photo edit with AI and a single prompt
                     </h2>
@@ -121,7 +121,6 @@ export default function LandingPage() {
                         Upload your image
                       </label>
                     </div>
-                <p className="text-gray-500 mt-3">or drop it here</p>
                 </div>
             </div>
         </section>
@@ -171,17 +170,21 @@ export default function LandingPage() {
           {/* 3: Image Left */}
           <div className="flex flex-col md:flex-row items-center md:space-x-12">
             <div className="md:w-1/2 mb-6 md:mb-0">
-              <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-                <span className="text-gray-500">Image Placeholder</span>
-              </div>
+              <img
+                src="/info-image3.png"
+                alt="Info section illustration"
+                className="w-full h-100 object-cover rounded-2xl"
+              />
             </div>
             <div className="md:w-1/2">
-              <h3 className="text-2xl font-semibold mb-4">Talk about Brush </h3>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700 mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p className="text-gray-700">Vivamus luctus urna sed urna ultricies ac tempor dui sagittis.</p>
-            </div>
+              <h3 className="text-2xl font-semibold mb-4">
+                Pinpoint Accuracy with the AI Brush
+              </h3>
+              <p className="text-gray-700">
+                With a simple brush stroke over your chosen area Vision Forge zeroes in on exactly what you want to change delivering cleaner results without touching the rest of the image It saves you time and gives you professional-level precision so every edit looks seamless and intentional
+              </p>
+          </div>
+
           </div>
         </section>
 
